@@ -1,0 +1,12 @@
+{
+  "name": "discos",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Catálogo web de CDs, vinilos, cassettes, VHS, DVDs y Blu-rays con fotos y precios — frontend Vite + Supabase",
+  "scripts": {
+    "setup": "npm install --prefix client",
+    "dev": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "preview": "npm run preview --prefix client"
+  }
+}
