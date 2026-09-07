@@ -10,7 +10,7 @@ Catálogo web para tu colección de medios físicos: **CDs, vinilos, cassettes, 
 | Estilos | **Tailwind CSS 4** | Diseño rápido y consistente |
 | Base de datos | **Supabase (Postgres)** | Gratis (500 MB), persistente, con panel de administración |
 | Fotos | **Supabase Storage** | Gratis (1 GB), URLs públicas por ítem |
-| Despliegue | **Vercel** (sitio estático) | Gratis (100 GB/mes), HTTPS y CDN incluidos |
+| Despliegue | **Vercel** (sitio estático, Root Directory = `client`) | Gratis (100 GB/mes), HTTPS y CDN incluidos |
 
 **Sin backend propio:** el navegador habla directamente con Supabase con la anon key; la seguridad la dan las políticas RLS.
 
@@ -51,11 +51,12 @@ Si faltan las claves, la app muestra una pantalla de configuración con estos mi
 
 1. Sube el proyecto a GitHub.
 2. En [vercel.com](https://vercel.com) → **Add New → Project** → importa el repo.
-3. En la pantalla de configuración no necesitas tocar Build/Output: el `vercel.json` de la raíz ya indica los comandos correctos. Solo agrega las **Environment Variables**:
-   - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` con los mismos valores del paso 4 local (marca Production, Preview y Development).
+3. En la pantalla de configuración:
+   - **Root Directory:** `client` (Vercel detecta Vite y usa sus comandos por defecto: no configures Build/Install/Output a mano).
+   - **Environment Variables:** agrega `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` con los mismos valores del paso 4 local (marca Production, Preview y Development). Vercel avisará que el prefijo `VITE_` expone los valores al navegador: es lo esperado, la anon key es pública por diseño.
 4. **Deploy** → tendrás una URL `https://tu-proyecto.vercel.app` persistente y con HTTPS.
 
-⚠️ Si agregas las variables después del primer deploy, haz **Redeploy** para que el build las incorpore. Cada `git push` redespliega automáticamente.
+⚠️ No uses comandos con `--prefix client` ni archivos `vercel.json` en la raíz: con Root Directory = `client` duplicarían la ruta (`client/client`). Si agregas variables después del primer deploy, haz **Redeploy** para que el build las incorpore. Cada `git push` redespliega automáticamente.
 
 ## 🔐 Seguridad
 
