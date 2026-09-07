@@ -51,12 +51,11 @@ Si faltan las claves, la app muestra una pantalla de configuración con estos mi
 
 1. Sube el proyecto a GitHub.
 2. En [vercel.com](https://vercel.com) → **Add New → Project** → importa el repo.
-3. En la pantalla de configuración:
-   - **Root Directory:** `client` (Vercel detecta Vite automáticamente).
-   - **Environment Variables:** agrega `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` con los mismos valores del paso 4 local (en *Production*, *Preview* y *Development*).
+3. En la pantalla de configuración no necesitas tocar Build/Output: el `vercel.json` de la raíz ya indica los comandos correctos. Solo agrega las **Environment Variables**:
+   - `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` con los mismos valores del paso 4 local (marca Production, Preview y Development).
 4. **Deploy** → tendrás una URL `https://tu-proyecto.vercel.app` persistente y con HTTPS.
 
-Cada `git push` redespliega automáticamente.
+⚠️ Si agregas las variables después del primer deploy, haz **Redeploy** para que el build las incorpore. Cada `git push` redespliega automáticamente.
 
 ## 🔐 Seguridad
 
