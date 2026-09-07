@@ -8,8 +8,6 @@ import ItemForm from './components/ItemForm';
 import SetupScreen from './components/SetupScreen';
 
 export default function App() {
-
-
   const [items, setItems] = useState<Item[]>([]);
   const [q, setQ] = useState('');
   const [format, setFormat] = useState<Format | ''>('');
