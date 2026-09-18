@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Format, Item, ItemFields } from '../types';
 import { FORMATS, conditionColor } from '../types';
+import { validarFoto, type FotoEntrada } from '../api';
+
+interface FotoUI {
+  /** URL mostrada: la definitiva (ya subida) o un blob de vista previa */
+  url: string;
+  /** Presente solo en fotos nuevas aún no subidas */
+  file?: File;
+}
 
 export default function ItemForm({
   item,
@@ -8,32 +16,64 @@ export default function ItemForm({
   onCancel,
 }: {
   item: Item | null;
-  onSave: (fields: ItemFields, file: File | null, id: string | null) => Promise<Item>;
+  onSave: (fields: ItemFields, fotos: FotoEntrada[], id: string | null) => Promise<Item>;
   onCancel: () => void;
 }) {
   const [title, setTitle] = useState(item?.title ?? '');
   const [artist, setArtist] = useState(item?.artist ?? '');
+  const [industry, setIndustry] = useState(item?.industry ?? '');
   const [format, setFormat] = useState<Format | ''>(item?.format ?? '');
   const [price, setPrice] = useState(item ? String(item.price) : '');
   const [notes, setNotes] = useState(item?.notes ?? '');
   const [condition, setCondition] = useState(item?.condition ?? 8);
-  const [preview, setPreview] = useState<string | null>(item?.photo ?? null);
-  const [file, setFile] = useState<File | null>(null);
+  const [fotos, setFotos] = useState<FotoUI[]>(() =>
+    item ? item.photos.map((url) => ({ url })) : [],
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
+  const blobUrls = useRef<string[]>([]);
 
-  // Revoca la URL del preview al desmontar
   useEffect(() => {
-    return () => {
-      if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
-    };
-  }, [preview]);
+    return () => blobUrls.current.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
 
-  function pickPhoto(selected: File | null) {
-    setFile(selected);
-    if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
-    setPreview(selected ? URL.createObjectURL(selected) : (item?.photo ?? null));
+  function agregarFotos(seleccion: FileList | null) {
+    if (!seleccion?.length) return;
+    const aceptadas: FotoUI[] = [];
+    for (const file of seleccion) {
+      const invalido = validarFoto(file);
+      if (invalido) {
+        setError(invalido);
+        continue;
+      }
+      const url = URL.createObjectURL(file);
+      blobUrls.current.push(url);
+      aceptadas.push({ url, file });
+    }
+    if (aceptadas.length) setError('');
+    setFotos((prev) => [...prev, ...aceptadas]);
+  }
+
+  function quitarFoto(idx: number) {
+    setFotos((prev) =>
+      prev.filter((f, i) => {
+        if (i !== idx) return true;
+        if (f.file && blobUrls.current.includes(f.url)) {
+          URL.revokeObjectURL(f.url);
+          blobUrls.current = blobUrls.current.filter((u) => u !== f.url);
+        }
+        return false;
+      }),
+    );
+  }
+
+  function hacerPortada(idx: number) {
+    setFotos((prev) => {
+      if (idx === 0) return prev;
+      const elegida = prev[idx];
+      return [elegida, ...prev.filter((_, i) => i !== idx)];
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -49,6 +89,7 @@ export default function ItemForm({
     const fields: ItemFields = {
       title: title.trim(),
       artist: artist.trim(),
+      industry: industry.trim(),
       format,
       price: priceNumber,
       notes: notes.trim(),
@@ -58,7 +99,8 @@ export default function ItemForm({
     setSaving(true);
     setError('');
     try {
-      await onSave(fields, file, item?.id ?? null);
+      const entradas: FotoEntrada[] = fotos.map((f) => (f.file ? { file: f.file } : { url: f.url }));
+      await onSave(fields, entradas, item?.id ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo guardar.');
       setSaving(false);
@@ -88,47 +130,61 @@ export default function ItemForm({
         </div>
 
         <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <Field label="Foto">
-            <div className="flex items-start gap-4">
-              <div className="size-24 shrink-0 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800">
-                {preview ? (
-                  <img src={preview} alt="Vista previa" className="size-full object-cover" />
-                ) : (
-                  <div className="flex size-full items-center justify-center text-3xl text-zinc-600">
-                    💿
-                  </div>
-                )}
-              </div>
-              <div className="space-y-2 text-sm">
-                <input
-                  ref={fileInput}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
-                  onChange={(e) => pickPhoto(e.target.files?.[0] ?? null)}
-                  className="hidden"
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInput.current?.click()}
-                  className="rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-semibold transition hover:bg-zinc-700"
+          <Field label={`Fotos (${fotos.length}) — la primera es la portada`}>
+            <div className="flex flex-wrap gap-2">
+              {fotos.map((foto, idx) => (
+                <div
+                  key={foto.url}
+                  className="group relative size-20 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-800"
                 >
-                  {preview ? 'Cambiar foto' : 'Subir foto'}
-                </button>
-                {preview && (
+                  <img src={foto.url} alt={`Foto ${idx + 1}`} className="size-full object-cover" />
+                  {idx === 0 ? (
+                    <span className="absolute left-1 top-1 rounded bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-zinc-950">
+                      Portada
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => hacerPortada(idx)}
+                      title="Hacer portada"
+                      className="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-zinc-200 opacity-0 transition group-hover:opacity-100"
+                    >
+                      ★ Portada
+                    </button>
+                  )}
                   <button
                     type="button"
-                    onClick={() => {
-                      if (fileInput.current) fileInput.current.value = '';
-                      pickPhoto(null);
-                    }}
-                    className="block text-xs text-rose-400 hover:underline"
+                    onClick={() => quitarFoto(idx)}
+                    aria-label={`Quitar foto ${idx + 1}`}
+                    className="absolute right-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-bold text-rose-300 opacity-0 transition group-hover:opacity-100 hover:bg-rose-500/30"
                   >
-                    Quitar foto
+                    ✕
                   </button>
-                )}
-                <p className="text-xs text-zinc-500">JPG, PNG, WebP, GIF o AVIF · máx. 5 MB</p>
-              </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                aria-label="Agregar fotos"
+                className="flex size-20 items-center justify-center rounded-xl border border-dashed border-zinc-600 text-2xl text-zinc-500 transition hover:border-amber-500/60 hover:text-amber-400"
+              >
+                ＋
+              </button>
             </div>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+              multiple
+              onChange={(e) => {
+                agregarFotos(e.target.files);
+                e.target.value = '';
+              }}
+              className="hidden"
+            />
+            <p className="mt-1.5 text-xs text-zinc-500">
+              JPG, PNG, WebP, GIF o AVIF · máx. 5 MB por foto
+            </p>
           </Field>
 
           <Field label="Título *">
@@ -141,14 +197,25 @@ export default function ItemForm({
             />
           </Field>
 
-          <Field label="Artista / Estudio">
-            <input
-              value={artist}
-              onChange={(e) => setArtist(e.target.value)}
-              placeholder="Ej. The Beatles"
-              className={inputClass}
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Artista / Estudio">
+              <input
+                value={artist}
+                onChange={(e) => setArtist(e.target.value)}
+                placeholder="Ej. The Beatles"
+                className={inputClass}
+              />
+            </Field>
+
+            <Field label="Industria">
+              <input
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                placeholder="Ej. Sony Music"
+                className={inputClass}
+              />
+            </Field>
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <Field label="Formato *">

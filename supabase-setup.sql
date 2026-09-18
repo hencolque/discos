@@ -9,10 +9,11 @@ create table if not exists public.items (
   id          uuid primary key default gen_random_uuid(),
   title       text not null,
   artist      text not null default '',
+  industry    text not null default '',
   format      text not null,
   price       double precision not null default 0,
   notes       text not null default '',
-  photo       text,
+  photos      text[] not null default '{}',
   condition   int not null default 8,
   created_at  timestamptz not null default now()
 );

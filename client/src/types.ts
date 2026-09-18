@@ -15,19 +15,23 @@ export interface Item {
   id: string;
   title: string;
   artist: string;
+  /** Sello / editorial / país de origen */
+  industry: string;
   format: Format;
   price: number;
   notes: string;
-  photo: string | null;
+  /** URLs públicas; la primera (photos[0]) es la portada */
+  photos: string[];
   /** Estado de conservación del 1 al 10 */
   condition: number;
   created_at: string;
 }
 
-/** Campos que edita el formulario (la foto va aparte como File). */
+/** Campos que edita el formulario (las fotos van aparte). */
 export interface ItemFields {
   title: string;
   artist: string;
+  industry: string;
   format: Format;
   price: number;
   notes: string;

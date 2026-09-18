@@ -3,19 +3,28 @@ import { FORMAT_STYLES, conditionColor, formatPrice } from '../types';
 
 export default function ItemCard({
   item,
+  onOpen,
   onEdit,
   onDelete,
 }: {
   item: Item;
+  onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const portada = item.photos[0] ?? null;
+
   return (
     <article className="group overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/60 transition hover:-translate-y-1 hover:border-zinc-600 hover:shadow-xl hover:shadow-black/40">
-      <div className="aspect-square overflow-hidden bg-zinc-800/60">
-        {item.photo ? (
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label={`Ver detalles de ${item.title}`}
+        className="relative block aspect-square w-full overflow-hidden bg-zinc-800/60"
+      >
+        {portada ? (
           <img
-            src={item.photo}
+            src={portada}
             alt={item.title}
             loading="lazy"
             className="size-full object-cover transition duration-300 group-hover:scale-105"
@@ -25,7 +34,15 @@ export default function ItemCard({
             <VinylPlaceholder />
           </div>
         )}
-      </div>
+        {item.photos.length > 1 && (
+          <span className="absolute right-2 top-2 rounded-full bg-black/70 px-2 py-0.5 text-xs font-semibold text-zinc-200">
+            📷 {item.photos.length}
+          </span>
+        )}
+        <span className="absolute inset-0 hidden items-center justify-center bg-black/50 text-sm font-semibold text-zinc-100 group-hover:flex">
+          🔍 Ver detalles
+        </span>
+      </button>
 
       <div className="space-y-2 p-4">
         <div className="flex items-center justify-between gap-2">
@@ -38,17 +55,23 @@ export default function ItemCard({
         </div>
 
         <h3 className="line-clamp-1 font-semibold" title={item.title}>
-          {item.title}
+          <button
+            type="button"
+            onClick={onOpen}
+            className="w-full text-left transition hover:text-amber-300"
+          >
+            {item.title}
+          </button>
         </h3>
         {item.artist && <p className="line-clamp-1 text-sm text-zinc-400">{item.artist}</p>}
+        {item.industry && (
+          <p className="line-clamp-1 text-xs text-zinc-500" title={`Industria: ${item.industry}`}>
+            🏭 {item.industry}
+          </p>
+        )}
         <p className={`text-xs font-medium ${conditionColor(item.condition)}`}>
           Estado: {item.condition}/10
         </p>
-        {item.notes && (
-          <p className="line-clamp-2 text-xs text-zinc-500" title={item.notes}>
-            {item.notes}
-          </p>
-        )}
 
         <div className="flex gap-2 pt-1">
           <button

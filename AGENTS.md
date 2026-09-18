@@ -8,7 +8,8 @@ SPA estática: **Vite + React 19 + TypeScript + Tailwind 4** en `client/`, que h
 
 - `client/src/api.ts`: ÚNICA capa de datos (CRUD en tabla `items` + subida/borrado de fotos en bucket `fotos`).
 - `client/src/supabase.ts`: cliente + constantes; requiere `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`. Sin ellas, `App.tsx` renderiza `SetupScreen` con instrucciones.
-- `supabase-setup.sql`: fuente de verdad del esquema (tabla `items`, bucket `fotos`, políticas RLS). Cambios de esquema = editar este SQL + `client/src/types.ts` juntos.
+- `supabase-setup.sql`: fuente de verdad del esquema (tabla `items` con `photos text[]` — portada = `photos[0]` — e `industry`, bucket `fotos`, políticas RLS). Cambios de esquema = editar este SQL + `client/src/types.ts` juntos.
+- `migrar-schema-fotos.sql`: migración para proyectos Supabase creados con el esquema viejo (`photo` única, sin `industry`); `api.ts` normaliza filas viejas en el cliente, pero guardar exige la migración ejecutada.
 - Despliegue en Vercel con **Root Directory = `client`** y detección automática de Vite (sin `vercel.json`): un `vercel.json` en la raíz o comandos con `--prefix client` duplican la ruta (`client/client`) y rompen el build.
 - `migrar-datos.sql`: INSERT de los ítems de la colección previa (fotos no migradas).
 

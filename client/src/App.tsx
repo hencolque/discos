@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createItem, deleteItem, fetchItems, updateItem } from './api';
+import { createItem, deleteItem, fetchItems, updateItem, type FotoEntrada } from './api';
 import { supabaseConfigured } from './supabase';
 import type { Format, Item, ItemFields } from './types';
 import { FORMATS, formatPrice } from './types';
 import ItemCard from './components/ItemCard';
 import ItemForm from './components/ItemForm';
+import ItemDetail from './components/ItemDetail';
 import SetupScreen from './components/SetupScreen';
 
 export default function App() {
@@ -15,6 +16,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
+  const [detalle, setDetalle] = useState<Item | null>(null);
   const loadToken = useRef(0);
 
   const load = useCallback(async () => {
@@ -40,11 +42,11 @@ export default function App() {
   }, [load, q, format]);
 
   const handleSave = useCallback(
-    async (fields: ItemFields, file: File | null, id: string | null) => {
+    async (fields: ItemFields, fotos: FotoEntrada[], id: string | null) => {
       const original = id !== null ? editing : null;
       const saved = original
-        ? await updateItem(original, fields, file)
-        : await createItem(fields, file);
+        ? await updateItem(original, fields, fotos)
+        : await createItem(fields, fotos);
       setFormOpen(false);
       setEditing(null);
       await load();
@@ -55,12 +57,14 @@ export default function App() {
 
   const handleDelete = useCallback(
     async (item: Item) => {
-      if (!window.confirm(`¿Eliminar “${item.title}”? Esta acción no se puede deshacer.`)) return;
+      if (!window.confirm(`¿Eliminar “${item.title}”? Esta acción no se puede deshacer.`)) return false;
       try {
         await deleteItem(item);
         await load();
+        return true;
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al eliminar');
+        return false;
       }
     },
     [load],
@@ -170,6 +174,7 @@ export default function App() {
             <ItemCard
               key={item.id}
               item={item}
+              onOpen={() => setDetalle(item)}
               onEdit={() => {
                 setEditing(item);
                 setFormOpen(true);
@@ -179,6 +184,21 @@ export default function App() {
           ))}
         </main>
       </div>
+
+      {detalle && (
+        <ItemDetail
+          item={detalle}
+          onClose={() => setDetalle(null)}
+          onEdit={() => {
+            setEditing(detalle);
+            setDetalle(null);
+            setFormOpen(true);
+          }}
+          onDelete={async () => {
+            if (await handleDelete(detalle)) setDetalle(null);
+          }}
+        />
+      )}
 
       {formOpen && (
         <ItemForm

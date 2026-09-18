@@ -1,6 +1,11 @@
 # 💿 Discoteca
 
-Catálogo web para tu colección de medios físicos: **CDs, vinilos, cassettes, VHS, DVDs, Blu-rays, MiniDisc y más**, con **fotos y precios en Bolivianos (Bs)** y **estado de conservación del 1 al 10** (por defecto 8). Funciona 100% en español.
+Catálogo web para tu colección de medios físicos: **CDs, vinilos, cassettes, VHS, DVDs, Blu-rays, MiniDisc y más**, con **múltiples fotos, precios en Bolivianos (Bs)**, **estado de conservación del 1 al 10** (por defecto 8) e **industria**. Funciona 100% en español.
+
+## ✨ Funciones
+
+- Subir ítems con **varias fotos** (JPG/PNG/WebP/GIF/AVIF, máx. 5 MB c/u): la tarjeta muestra la **portada** (primera foto) y al hacer clic se abren **todos los detalles** con la galería completa.
+- **Precios en Bolivianos (Bs)**, **estado de conservación 1–10** con color según condición y campo **Industria** (sello / editorial / país).
 
 ## 🛠 Stack
 
@@ -26,6 +31,7 @@ Catálogo web para tu colección de medios físicos: **CDs, vinilos, cassettes, 
 │       ├── types.ts            # Tipos, formatos, colores y formato de precio Bs
 │       └── components/         # ItemCard, ItemForm (modal), SetupScreen
 ├── supabase-setup.sql          # SQL a ejecutar en Supabase (tabla + bucket + RLS)
+├── migrar-schema-fotos.sql     # Migración: varias fotos + industria (proyectos existentes)
 ├── migrar-datos.sql            # (Opcional) ítems de la colección anterior
 ├── .env.example                # Plantilla de variables de entorno
 └── backend-sqlite-antiguo.tar.gz  # Backup del backend Express/SQLite anterior
@@ -37,6 +43,7 @@ Requisitos: Node.js ≥ 20 y una cuenta gratis en [supabase.com](https://supabas
 
 1. **Instalar:** `npm run setup` (o `npm install --prefix client`).
 2. **Crear la base de datos:** en tu proyecto de Supabase abre **SQL Editor**, pega el contenido de `supabase-setup.sql` y ejecútalo. Crea la tabla `items`, el bucket `fotos` y sus políticas de acceso.
+   - ¿Ya tenías un proyecto de la versión anterior (una sola foto)? Ejecuta `migrar-schema-fotos.sql`: agrega `industry` y `photos[]`, y mueve la foto única al arreglo.
 3. **(Opcional) Recuperar datos antiguos:** ejecuta `migrar-datos.sql` en el SQL Editor. Las fotos no se migran: súbelas de nuevo editando cada ítem.
 4. **Configurar claves:** en Supabase → **Project Settings → API** copia la *Project URL* y la *anon key*. Copia `.env.example` como `client/.env.local` y rellénalo:
    ```
@@ -70,6 +77,6 @@ El plan gratis de Supabase **pausa el proyecto tras 7 días sin actividad** de b
 ## 🔧 Personalizar
 
 - **Formatos soportados:** lista `FORMATS` y colores en `client/src/types.ts`.
-- **Límite de foto:** 5 MB (constante `MAX_PHOTO_BYTES` en `client/src/api.ts`).
+- **Límite de foto:** 5 MB por foto (constante `MAX_PHOTO_BYTES` en `client/src/api.ts`).
 - **Moneda:** `Bs` con formato boliviano en `formatPrice()` de `client/src/types.ts`.
 - **Estado:** escala 1–10 con defecto 8; colores en `conditionColor()` de `client/src/types.ts`. Para cambiar el defecto, ajusta también `DEFAULT 8` en `supabase-setup.sql`.
