@@ -1,29 +1,10 @@
 -- ═══════════════════════════════════════════════════════════════
--- Setup de Supabase para "Discoteca" (instalaciones nuevas)
--- Pega y ejecuta este archivo completo en:
---   Supabase → SQL Editor → New query → Run
---
--- ¿Proyecto ya existente? Usa las migraciones incrementales
--- (migrar-schema-fotos.sql, migrar-auth.sql) en su lugar.
+-- Migración: login con roles (admin / viewer)
+-- Ejecuta en: Supabase → SQL Editor → Run
+-- Es idempotente: puedes ejecutarla varias veces sin romper nada.
 -- ═══════════════════════════════════════════════════════════════
 
--- 1) Tabla de ítems de la colección
-create table if not exists public.items (
-  id          uuid primary key default gen_random_uuid(),
-  title       text not null,
-  artist      text not null default '',
-  industry    text not null default '',
-  format      text not null,
-  price       double precision not null default 0,
-  notes       text not null default '',
-  photos      text[] not null default '{}',
-  condition   int not null default 8,
-  created_at  timestamptz not null default now()
-);
-
-alter table public.items enable row level security;
-
--- 2) Perfiles con rol (admin / viewer)
+-- 1) Perfiles con rol (uno por usuario de autenticación)
 create table if not exists public.profiles (
   id         uuid primary key references auth.users(id) on delete cascade,
   role       text not null default 'viewer' check (role in ('admin', 'viewer')),
@@ -37,6 +18,7 @@ create policy "leer propio perfil"
   on public.profiles for select
   using (auth.uid() = id);
 
+-- 2) Función auxiliar: evita recursión de RLS al consultar perfiles
 create or replace function public.is_admin() returns boolean
 language sql stable security definer set search_path = public as $$
   select exists (
@@ -45,6 +27,7 @@ language sql stable security definer set search_path = public as $$
   );
 $$;
 
+-- 3) Perfil automático para cada usuario nuevo
 create or replace function public.crear_perfil() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
@@ -58,7 +41,10 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.crear_perfil();
 
--- 3) Ítems: lectura para autenticados; escritura solo admin
+-- 4) Ítems: lectura para cualquier usuario autenticado;
+--    escritura y borrado solo para admin.
+--    (Reemplaza la política abierta "acceso publico items".)
+drop policy if exists "acceso publico items" on public.items;
 drop policy if exists "lectura items" on public.items;
 create policy "lectura items"
   on public.items for select
@@ -80,18 +66,8 @@ create policy "borrado items"
   on public.items for delete
   using (public.is_admin());
 
--- 4) Bucket para las fotos
-insert into storage.buckets (id, name, public)
-values ('fotos', 'fotos', true)
-on conflict (id) do nothing;
-
--- 5) Fotos: lectura pública (las <img> no envían token); subir y
---    borrar solo admin.
-drop policy if exists "lectura publica fotos" on storage.objects;
-create policy "lectura publica fotos"
-  on storage.objects for select
-  using (bucket_id = 'fotos');
-
+-- 5) Fotos: la lectura pública se queda (las etiquetas <img> no envían
+--    token); subir y borrar solo admin.
 drop policy if exists "escritura fotos" on storage.objects;
 create policy "escritura fotos"
   on storage.objects for insert
@@ -103,11 +79,13 @@ create policy "borrado fotos"
   using (bucket_id = 'fotos' and public.is_admin());
 
 -- ═══════════════════════════════════════════════════════════════
--- 6) CREAR USUARIOS: Supabase → Authentication → Users → Add user
--- 7) PROMOVERTE A ADMIN (edita el correo y descomenta):
+-- 6) PROMOVERTE A ADMIN (edita el correo y descomenta):
 --
 -- update public.profiles p
 -- set role = 'admin'
 -- from auth.users u
 -- where u.id = p.id and u.email = 'tu-correo@ejemplo.com';
+--
+-- 7) CREAR USUARIOS: Supabase → Authentication → Users → Add user
+--    (define tú la contraseña; no hay registro público en la web).
 -- ═══════════════════════════════════════════════════════════════

@@ -3,11 +3,13 @@ import { FORMAT_STYLES, conditionColor, formatPrice } from '../types';
 
 export default function ItemCard({
   item,
+  puedeEditar,
   onOpen,
   onEdit,
   onDelete,
 }: {
   item: Item;
+  puedeEditar: boolean;
   onOpen: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -73,20 +75,22 @@ export default function ItemCard({
           Estado: {item.condition}/10
         </p>
 
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={onEdit}
-            className="flex-1 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-700"
-          >
-            Editar
-          </button>
-          <button
-            onClick={onDelete}
-            className="flex-1 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-rose-400 transition hover:bg-rose-500/15"
-          >
-            Eliminar
-          </button>
-        </div>
+        {puedeEditar && (
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={onEdit}
+              className="flex-1 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-zinc-200 transition hover:bg-zinc-700"
+            >
+              Editar
+            </button>
+            <button
+              onClick={onDelete}
+              className="flex-1 rounded-lg bg-zinc-800 px-3 py-1.5 text-xs font-semibold text-rose-400 transition hover:bg-rose-500/15"
+            >
+              Eliminar
+            </button>
+          </div>
+        )}
       </div>
     </article>
   );

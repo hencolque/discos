@@ -1,15 +1,17 @@
 # AGENTS.md — Discoteca
 
-Web app en español para catalogar medios físicos (CD, Vinilo, Cassette, VHS, DVD, Blu-ray, MiniDisc, Otro) con fotos, precios en Bolivianos (Bs) y estado de conservación 1–10 (defecto 8).
+Web app en español para catalogar medios físicos (CD, Vinilo, Cassette, VHS, DVD, Blu-ray, MiniDisc, Otro) con fotos, precios en Bolivianos (Bs) y estado de conservación 1–10 (defecto 8). Login obligatorio con roles: `admin` (CRUD) y `viewer` (solo lectura).
 
 ## Arquitectura (v2, sin backend)
 
 SPA estática: **Vite + React 19 + TypeScript + Tailwind 4** en `client/`, que habla directamente con **Supabase** (Postgres + Storage) mediante `@supabase/supabase-js`. Se despliega en Vercel (Root Directory = `client`). Ya NO existe backend Express/SQLite: el código anterior está respaldado en `backend-sqlite-antiguo.tar.gz`.
 
 - `client/src/api.ts`: ÚNICA capa de datos (CRUD en tabla `items` + subida/borrado de fotos en bucket `fotos`).
+- `client/src/auth.ts`: sesión (`supabase.auth`) + rol desde `profiles`; `App.tsx` bloquea la app tras el login y pasa `puedeEditar` (rol admin) a tarjeta/detalle. Los roles se aplican de verdad con RLS (`is_admin()` en `migrar-auth.sql`), ocultar botones es solo UX.
 - `client/src/supabase.ts`: cliente + constantes; requiere `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`. Sin ellas, `App.tsx` renderiza `SetupScreen` con instrucciones.
-- `supabase-setup.sql`: fuente de verdad del esquema (tabla `items` con `photos text[]` — portada = `photos[0]` — e `industry`, bucket `fotos`, políticas RLS). Cambios de esquema = editar este SQL + `client/src/types.ts` juntos.
-- `migrar-schema-fotos.sql`: migración para proyectos Supabase creados con el esquema viejo (`photo` única, sin `industry`); `api.ts` normaliza filas viejas en el cliente, pero guardar exige la migración ejecutada.
+- `supabase-setup.sql`: fuente de verdad del esquema (tabla `items` con `photos text[]` — portada = `photos[0]` — e `industry`, tabla `profiles` con roles, bucket `fotos`, políticas RLS). Cambios de esquema = editar este SQL + `client/src/types.ts` juntos.
+- `migrar-schema-fotos.sql` y `migrar-auth.sql`: migraciones incrementales para proyectos Supabase creados con versiones anteriores; idempotentes. `api.ts` normaliza filas viejas en el cliente, pero guardar exige las migraciones ejecutadas.
+- Usuarios: se crean desde el dashboard de Supabase (Authentication → Users); no hay registro público. Cada usuario nace `viewer` (trigger `on_auth_user_created`); promover a admin es un UPDATE en `profiles`.
 - Despliegue en Vercel con **Root Directory = `client`** y detección automática de Vite (sin `vercel.json`): un `vercel.json` en la raíz o comandos con `--prefix client` duplican la ruta (`client/client`) y rompen el build.
 - `migrar-datos.sql`: INSERT de los ítems de la colección previa (fotos no migradas).
 
@@ -38,5 +40,5 @@ Requiere Node ≥ 20 y `client/.env.local` con las claves (plantilla en `.env.ex
 - `price` es `double precision` a propósito: la columna `numeric` de Postgres llega como string a supabase-js.
 - El buscador sanitiza `q` (quita comas/paréntesis) porque PostgREST rompe el `.or()` con esos caracteres.
 - El borrado/reemplazo de fotos extrae la ruta del bucket buscando `/object/public/fotos/`; si cambias el nombre del bucket (`BUCKET` en `supabase.ts`), cambia también `supabase-setup.sql` y ese marcador.
-- Las políticas RLS son abiertas a propósito (uso personal); para producción multiusuario requieren Supabase Auth (ver comentarios en el SQL).
+- Las políticas RLS de escritura exigen rol admin (`is_admin()`, función `security definer` para evitar recursión con `profiles`); la lectura de fotos en Storage sigue pública porque las `<img>` no envían token.
 - curl desde Git Bash no envía UTF-8 ni acepta `;type=`: para probar Supabase por script usa `node -e` con `fetch`.

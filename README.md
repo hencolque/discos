@@ -4,6 +4,7 @@ Catálogo web para tu colección de medios físicos: **CDs, vinilos, cassettes, 
 
 ## ✨ Funciones
 
+- **Login con roles**: **admin** (crea, edita, elimina) y **viewer** (solo consulta). Sin registro público: las cuentas se crean desde el panel de Supabase.
 - Subir ítems con **varias fotos** (JPG/PNG/WebP/GIF/AVIF, máx. 5 MB c/u): la tarjeta muestra la **portada** (primera foto) y al hacer clic se abren **todos los detalles** con la galería completa.
 - **Precios en Bolivianos (Bs)**, **estado de conservación 1–10** con color según condición y campo **Industria** (sello / editorial / país).
 
@@ -42,8 +43,8 @@ Catálogo web para tu colección de medios físicos: **CDs, vinilos, cassettes, 
 Requisitos: Node.js ≥ 20 y una cuenta gratis en [supabase.com](https://supabase.com).
 
 1. **Instalar:** `npm run setup` (o `npm install --prefix client`).
-2. **Crear la base de datos:** en tu proyecto de Supabase abre **SQL Editor**, pega el contenido de `supabase-setup.sql` y ejecútalo. Crea la tabla `items`, el bucket `fotos` y sus políticas de acceso.
-   - ¿Ya tenías un proyecto de la versión anterior (una sola foto)? Ejecuta `migrar-schema-fotos.sql`: agrega `industry` y `photos[]`, y mueve la foto única al arreglo.
+2. **Crear la base de datos:** en tu proyecto de Supabase abre **SQL Editor**, pega el contenido de `supabase-setup.sql` y ejecútalo. Crea la tabla `items`, la tabla `profiles` (roles), el bucket `fotos` y todas las políticas de acceso.
+   - ¿Ya tenías un proyecto de la versión anterior? Ejecuta también `migrar-schema-fotos.sql` (varias fotos + industria) y `migrar-auth.sql` (login y roles). Ambas son idempotentes.
 3. **(Opcional) Recuperar datos antiguos:** ejecuta `migrar-datos.sql` en el SQL Editor. Las fotos no se migran: súbelas de nuevo editando cada ítem.
 4. **Configurar claves:** en Supabase → **Project Settings → API** copia la *Project URL* y la *anon key*. Copia `.env.example` como `client/.env.local` y rellénalo:
    ```
@@ -65,14 +66,29 @@ Si faltan las claves, la app muestra una pantalla de configuración con estos mi
 
 ⚠️ No uses comandos con `--prefix client` ni archivos `vercel.json` en la raíz: con Root Directory = `client` duplicarían la ruta (`client/client`). Si agregas variables después del primer deploy, haz **Redeploy** para que el build las incorpore. Cada `git push` redespliega automáticamente.
 
-## 🔐 Seguridad
+## 🔐 Login y roles
 
-Las políticas RLS de `supabase-setup.sql` permiten que **cualquiera con la URL** vea y edite el catálogo (modo simple, pensado para uso personal). Para restringirlo:
+El catálogo requiere iniciar sesión (Supabase Auth, correo + contraseña). Los roles viven en la tabla `profiles` y la seguridad la aplican las políticas RLS de Postgres, no solo la interfaz:
 
-- Crea un usuario en **Supabase → Authentication** y activa el login por email en la app (`supabase.auth.signInWithPassword`), o
-- Cambia las políticas para que solo `auth.role() = 'authenticated'` pueda escribir (instrucciones comentadas dentro del propio SQL).
+| Rol | Puede |
+|---|---|
+| `admin` | Ver, crear, editar y eliminar ítems y fotos |
+| `viewer` | Solo ver el catálogo (la API también le rechaza escrituras) |
 
-El plan gratis de Supabase **pausa el proyecto tras 7 días sin actividad** de base de datos; basta con abrir la app de vez en cuando (se reactiva desde el panel o con la primera visita).
+**Puesta en marcha del acceso (2 minutos):**
+
+1. Ejecuta `migrar-auth.sql` en el SQL Editor (incluido en `supabase-setup.sql` en instalaciones nuevas).
+2. Crea tu usuario: **Supabase → Authentication → Users → Add user** (define tú la contraseña; la app no tiene registro público).
+3. Promuévete a admin con este SQL (edita el correo; también está comentado al final de `migrar-auth.sql`):
+   ```sql
+   update public.profiles p
+   set role = 'admin'
+   from auth.users u
+   where u.id = p.id and u.email = 'tu-correo@ejemplo.com';
+   ```
+4. Ingresa en la web con ese correo y contraseña. Cada usuario nuevo nace como `viewer` automáticamente.
+
+Notas: las fotos se sirven como URLs públicas porque las etiquetas `<img>` del navegador no envían token de sesión — lo protegido son los datos y las escrituras. El plan gratis de Supabase **pausa el proyecto tras 7 días sin actividad** de base de datos; basta con abrir la app de vez en cuando.
 
 ## 🔧 Personalizar
 

@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createItem, deleteItem, fetchItems, updateItem, type FotoEntrada } from './api';
 import { supabaseConfigured } from './supabase';
+import { cargarSesion, cerrarSesion, iniciarSesion, onCambioSesion, type SesionInfo } from './auth';
 import type { Format, Item, ItemFields } from './types';
 import { FORMATS, formatPrice } from './types';
 import ItemCard from './components/ItemCard';
 import ItemForm from './components/ItemForm';
 import ItemDetail from './components/ItemDetail';
+import LoginScreen from './components/LoginScreen';
 import SetupScreen from './components/SetupScreen';
 
 export default function App() {
@@ -17,6 +19,20 @@ export default function App() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
   const [detalle, setDetalle] = useState<Item | null>(null);
+  const [sesion, setSesion] = useState<SesionInfo | null>(null);
+  const [authCargando, setAuthCargando] = useState(true);
+
+  useEffect(() => {
+    let viva = true;
+    cargarSesion()
+      .then((s) => viva && setSesion(s))
+      .finally(() => viva && setAuthCargando(false));
+    const cancelar = onCambioSesion((s) => viva && setSesion(s));
+    return () => {
+      viva = false;
+      cancelar();
+    };
+  }, []);
   const loadToken = useRef(0);
 
   const load = useCallback(async () => {
@@ -71,6 +87,22 @@ export default function App() {
   );
 
   if (!supabaseConfigured) return <SetupScreen />;
+  if (authCargando) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-zinc-950 text-5xl">💿</div>
+    );
+  }
+  if (!sesion) {
+    return (
+      <LoginScreen
+        onIngresar={async (email, password) => {
+          await iniciarSesion(email, password);
+          setSesion(await cargarSesion());
+        }}
+      />
+    );
+  }
+  const esAdmin = sesion.rol === 'admin';
 
   const total = items.reduce((sum, item) => sum + item.price, 0);
 
@@ -95,15 +127,33 @@ export default function App() {
               </p>
             </div>
           </div>
-          <button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-            className="ml-auto rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-lg shadow-amber-500/20 transition hover:bg-amber-400 active:scale-95"
-          >
-            + Agregar ítem
-          </button>
+          <div className="ml-auto flex items-center gap-3">
+            {esAdmin && (
+              <button
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+                className="rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-semibold text-zinc-950 shadow-lg shadow-amber-500/20 transition hover:bg-amber-400 active:scale-95"
+              >
+                + Agregar ítem
+              </button>
+            )}
+            <span className="hidden text-right text-xs leading-4 text-zinc-400 sm:block">
+              <b className="text-zinc-200">{sesion.email}</b>
+              <br />
+              {esAdmin ? 'Administrador' : 'Visualizador'}
+            </span>
+            <button
+              onClick={async () => {
+                await cerrarSesion();
+                setSesion(null);
+              }}
+              className="rounded-xl bg-zinc-800 px-3 py-2 text-xs font-semibold text-zinc-300 transition hover:bg-zinc-700"
+            >
+              Salir
+            </button>
+          </div>
         </header>
 
         <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 backdrop-blur">
@@ -155,7 +205,7 @@ export default function App() {
                   : 'Agrega tu primer disco, cassette o película con su foto y precio.'}
               </p>
             </div>
-            {!q && !format && (
+            {!q && !format && esAdmin && (
               <button
                 onClick={() => {
                   setEditing(null);
@@ -174,6 +224,7 @@ export default function App() {
             <ItemCard
               key={item.id}
               item={item}
+              puedeEditar={esAdmin}
               onOpen={() => setDetalle(item)}
               onEdit={() => {
                 setEditing(item);
@@ -188,6 +239,7 @@ export default function App() {
       {detalle && (
         <ItemDetail
           item={detalle}
+          puedeEditar={esAdmin}
           onClose={() => setDetalle(null)}
           onEdit={() => {
             setEditing(detalle);
