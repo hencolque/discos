@@ -64,7 +64,9 @@ export async function fetchItems(params: { q?: string; format?: string }): Promi
   if (params.format) query = query.eq('format', params.format);
   if (params.q) {
     const like = `%${sanitizar(params.q)}%`;
-    query = query.or(`title.ilike.${like},artist.ilike.${like},notes.ilike.${like}`);
+    query = query.or(
+      `title.ilike.${like},artist.ilike.${like},industry.ilike.${like},notes.ilike.${like}`,
+    );
   }
   const { data, error } = await query;
   if (error) throw traducirError(error, 'No se pudo cargar el catálogo');

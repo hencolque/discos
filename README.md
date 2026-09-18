@@ -6,7 +6,7 @@ Catálogo web para tu colección de medios físicos: **CDs, vinilos, cassettes, 
 
 - **Login con roles**: **admin** (crea, edita, elimina) y **viewer** (solo consulta). Sin registro público: las cuentas se crean desde el panel de Supabase.
 - Subir ítems con **varias fotos** (JPG/PNG/WebP/GIF/AVIF, máx. 5 MB c/u): la tarjeta muestra la **portada** (primera foto) y al hacer clic se abren **todos los detalles** con la galería completa.
-- **Precios en Bolivianos (Bs)**, **estado de conservación 1–10** con color según condición y campo **Industria** (sello / editorial / país).
+- **Precios en Bolivianos (Bs)**, **estado de conservación 1–10** con color según condición e **Industria** (país/región de fabricación: Europa, USA, Chile…), con sugerencias al escribir y buscable.
 
 ## 🛠 Stack
 

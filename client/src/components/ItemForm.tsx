@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Format, Item, ItemFields } from '../types';
-import { FORMATS, conditionColor } from '../types';
+import { FORMATS, INDUSTRIAS, conditionColor } from '../types';
 import { validarFoto, type FotoEntrada } from '../api';
 
 interface FotoUI {
@@ -207,13 +207,19 @@ export default function ItemForm({
               />
             </Field>
 
-            <Field label="Industria">
+            <Field label="Industria (país/región)">
               <input
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
-                placeholder="Ej. Sony Music"
+                placeholder="Ej. Europa, USA, Japón…"
+                list="opciones-industria"
                 className={inputClass}
               />
+              <datalist id="opciones-industria">
+                {INDUSTRIAS.map((i) => (
+                  <option key={i} value={i} />
+                ))}
+              </datalist>
             </Field>
           </div>
 

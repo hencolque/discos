@@ -108,7 +108,7 @@ export default function ItemDetail({
             {item.artist && (
               <Dato label="Artista / Estudio">{item.artist}</Dato>
             )}
-            {item.industry && <Dato label="Industria">{item.industry}</Dato>}
+            {item.industry && <Dato label="Industria (país/región)">{item.industry}</Dato>}
             <Dato label="Estado de conservación">
               <span className={`font-bold ${conditionColor(item.condition)}`}>
                 {item.condition}/10

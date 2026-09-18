@@ -15,7 +15,7 @@ export interface Item {
   id: string;
   title: string;
   artist: string;
-  /** Sello / editorial / país de origen */
+  /** Industria: país/región de fabricación (Europa, USA, Chile…) */
   industry: string;
   format: Format;
   price: number;
@@ -26,6 +26,30 @@ export interface Item {
   condition: number;
   created_at: string;
 }
+
+/** Sugerencias para el campo industria (texto libre con autocompletado). */
+export const INDUSTRIAS = [
+  'Europa',
+  'Reino Unido',
+  'Alemania',
+  'Italia',
+  'Francia',
+  'Países Bajos',
+  'España',
+  'Rusia',
+  'USA',
+  'Canadá',
+  'México',
+  'Brasil',
+  'Argentina',
+  'Chile',
+  'Colombia',
+  'Perú',
+  'Uruguay',
+  'Bolivia',
+  'Japón',
+  'Australia',
+];
 
 /** Campos que edita el formulario (las fotos van aparte). */
 export interface ItemFields {
