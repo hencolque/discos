@@ -51,11 +51,12 @@ export default function App() {
     }
   }, [q, format]);
 
-  // Recarga con debounce al escribir en el buscador
+  // Recarga con debounce al escribir en el buscador; también al cambiar la
+  // sesión: la primera carga puede ocurrir antes de que el token esté listo
   useEffect(() => {
     const t = setTimeout(load, q || format ? 250 : 0);
     return () => clearTimeout(t);
-  }, [load, q, format]);
+  }, [load, q, format, sesion]);
 
   const handleSave = useCallback(
     async (fields: ItemFields, fotos: FotoEntrada[], id: string | null) => {
